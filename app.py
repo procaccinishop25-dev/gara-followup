@@ -45,9 +45,7 @@ if "session" not in st.session_state:
 
     st.subheader("Accedi")
 
-    email = st.text_input(
-        "Email"
-    )
+    email = st.text_input("Email")
 
     password = st.text_input(
         "Password",
@@ -83,6 +81,21 @@ if "session" not in st.session_state:
 
 
 # =====================================================
+# MESSAGGI
+# =====================================================
+
+if "messaggio_successo" in st.session_state:
+
+    st.success(
+        st.session_state["messaggio_successo"]
+    )
+
+    del st.session_state[
+        "messaggio_successo"
+    ]
+
+
+# =====================================================
 # UTENTE AUTENTICATO
 # =====================================================
 
@@ -109,19 +122,6 @@ except Exception as e:
 
     st.stop()
 
-# =====================================================
-# MESSAGGI
-# =====================================================
-
-if "messaggio_successo" in st.session_state:
-
-    st.success(
-        st.session_state["messaggio_successo"]
-    )
-
-    del st.session_state[
-        "messaggio_successo"
-    ]
 
 # =====================================================
 # SIDEBAR
@@ -277,7 +277,9 @@ elif pagina == "Gare":
                     dati
                 )
 
-                st.session_state["messaggio_successo"] = (
+                st.session_state[
+                    "messaggio_successo"
+                ] = (
                     "✅ Gara salvata correttamente."
                 )
 
@@ -512,34 +514,35 @@ elif pagina == "Gare":
                 ) or "",
                 key="modifica_link"
             )
-# =================================================
-# STATO GARA
-# =================================================
 
-stati_gara = [
-    "IN_ATTESA_APERTURA",
-    "APERTA",
-    "AGGIUDICATA",
-    "NON_AGGIUDICATA",
-    "ANNULLATA"
-]
+            # -----------------------------------------
+            # STATO GARA
+            # -----------------------------------------
 
-stato_attuale = gara_selezionata.get(
-    "stato"
-)
+            stati_gara = [
+                "IN_ATTESA_APERTURA",
+                "APERTA",
+                "AGGIUDICATA",
+                "NON_AGGIUDICATA",
+                "ANNULLATA"
+            ]
 
-if stato_attuale not in stati_gara:
+            stato_attuale = gara_selezionata.get(
+                "stato"
+            )
 
-    stato_attuale = "IN_ATTESA_APERTURA"
+            if stato_attuale not in stati_gara:
 
-modifica_stato = st.selectbox(
-    "Stato gara",
-    stati_gara,
-    index=stati_gara.index(
-        stato_attuale
-    ),
-    key="modifica_stato"
-)
+                stato_attuale = "IN_ATTESA_APERTURA"
+
+            modifica_stato = st.selectbox(
+                "Stato gara",
+                stati_gara,
+                index=stati_gara.index(
+                    stato_attuale
+                ),
+                key="modifica_stato"
+            )
 
             modifica_vincitore = st.text_input(
                 "Vincitore",
@@ -572,6 +575,10 @@ modifica_stato = st.selectbox(
                 ) or "",
                 key="modifica_ultimo_aggiornamento"
             )
+
+            # -----------------------------------------
+            # SALVATAGGIO MODIFICHE
+            # -----------------------------------------
 
             if st.button(
                 "Salva modifiche",
@@ -624,7 +631,9 @@ modifica_stato = st.selectbox(
                             dati_modifica
                         )
 
-                        st.session_state["messaggio_successo"] = (
+                        st.session_state[
+                            "messaggio_successo"
+                        ] = (
                             "✅ Gara aggiornata correttamente."
                         )
 
