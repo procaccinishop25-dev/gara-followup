@@ -84,14 +84,16 @@ try:
     azienda = get_mia_azienda(
         supabase
     )
-
+ 
     azienda_id = azienda["id"]
     
     gare = get_gare(
         supabase,
         azienda_id
     )
-    
+    st.write("DEBUG GARE:", gare)
+    st.write("DEBUG TIPO:", type(gare).__name__)
+
 except Exception as e:
     
     st.error(
