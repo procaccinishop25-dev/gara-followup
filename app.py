@@ -266,6 +266,50 @@ elif pagina == "Gare":
                     f"Errore nel salvataggio: {e}"
                 )
 
+    st.divider()
+
+    st.subheader("Gare esistenti")
+
+    if not gare:
+
+        st.info(
+            "Non ci sono gare."
+        )
+
+    else:
+
+        for gara in gare:
+
+            with st.container(border=True):
+
+                col1, col2 = st.columns([3, 1])
+
+                with col1:
+
+                    st.write(
+                        f"**{gara['oggetto']}**"
+                    )
+
+                    st.caption(
+                        f"CIG: {gara.get('cig') or '-'}"
+                    )
+
+                    st.caption(
+                        f"Stazione appaltante: "
+                        f"{gara['stazione_appaltante']}"
+                    )
+
+                with col2:
+
+                    st.write(
+                        f"**{gara['stato']}**"
+                    )
+
+                    if gara.get("importo") is not None:
+
+                        st.write(
+                            f"€ {gara['importo']:,.2f}"
+                        )
 
 # =====================================================
 # ATTIVITÀ
