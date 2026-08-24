@@ -512,6 +512,34 @@ elif pagina == "Gare":
                 ) or "",
                 key="modifica_link"
             )
+# =================================================
+# STATO GARA
+# =================================================
+
+stati_gara = [
+    "IN_ATTESA_APERTURA",
+    "APERTA",
+    "AGGIUDICATA",
+    "NON_AGGIUDICATA",
+    "ANNULLATA"
+]
+
+stato_attuale = gara_selezionata.get(
+    "stato"
+)
+
+if stato_attuale not in stati_gara:
+
+    stato_attuale = "IN_ATTESA_APERTURA"
+
+modifica_stato = st.selectbox(
+    "Stato gara",
+    stati_gara,
+    index=stati_gara.index(
+        stato_attuale
+    ),
+    key="modifica_stato"
+)
 
             modifica_vincitore = st.text_input(
                 "Vincitore",
@@ -569,6 +597,7 @@ elif pagina == "Gare":
                         "link_portale": (
                             modifica_link or None
                         ),
+                        "stato": modifica_stato,
                         "vincitore": (
                             modifica_vincitore or None
                         ),
