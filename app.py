@@ -48,6 +48,11 @@ if "session" not in st.session_state:
 
             st.session_state["session"] = response.session
 
+            supabase.auth.set_session(
+                response.session.access_token,
+                response.session.refresh_token
+            )   
+
             st.rerun()
 
         except Exception as e:
