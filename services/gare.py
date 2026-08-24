@@ -55,4 +55,20 @@ def crea_gara(
         .execute()
     )
 
+def aggiorna_gara(
+    supabase: Client,
+    azienda_id: str,
+    gara_id: str,
+    dati: dict
+):
+
+    response = (
+        supabase
+        .table("gare")
+        .update(dati)
+        .eq("id", gara_id)
+        .eq("azienda_id", azienda_id)
+        .execute()
+    )
+
     return response.data
