@@ -93,7 +93,7 @@ with st.sidebar:
     st.write("👤 Utente")
 
     st.caption(
-        user.email
+        st.session_state["session"].user.email
     )
 
     st.write("🏢 Azienda")
