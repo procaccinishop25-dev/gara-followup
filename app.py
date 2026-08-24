@@ -220,7 +220,7 @@ elif pagina == "Gare":
         value=None
     )
 
-    if st.button("Salva gara"):
+if st.button("Salva gara"):
 
     if not oggetto or not stazione_appaltante:
 
