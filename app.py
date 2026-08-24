@@ -11,6 +11,7 @@ from services.gare import (
     crea_gara
 )
 
+
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
     page_icon="📋",
@@ -30,6 +31,7 @@ if "session" in st.session_state:
         st.session_state["session"].access_token,
         st.session_state["session"].refresh_token
     )
+
 
 # =====================================================
 # LOGIN
@@ -63,7 +65,7 @@ if "session" not in st.session_state:
             supabase.auth.set_session(
                 response.session.access_token,
                 response.session.refresh_token
-            )   
+            )
 
             st.rerun()
 
@@ -87,16 +89,16 @@ try:
     azienda = get_mia_azienda(
         supabase
     )
- 
+
     azienda_id = azienda["id"]
-    
+
     gare = get_gare(
         supabase,
         azienda_id
     )
 
 except Exception as e:
-    
+
     st.error(
         f"Errore autenticazione: {e}"
     )
@@ -136,6 +138,7 @@ with st.sidebar:
             "Attività"
         ]
     )
+
 
 # =====================================================
 # DASHBOARD
@@ -177,6 +180,7 @@ if pagina == "Dashboard":
     st.info(
         "La dashboard verrà collegata ai dati reali nelle prossime fasi."
     )
+
 
 # =====================================================
 # GARE
@@ -220,49 +224,50 @@ elif pagina == "Gare":
         value=None
     )
 
-if st.button("Salva gara"):
+    if st.button("Salva gara"):
 
-    if not oggetto or not stazione_appaltante:
-
-        st.error(
-            "Compila i campi obbligatori."
-        )
-
-    else:
-
-        dati = {
-            "cig": cig or None,
-            "oggetto": oggetto,
-            "stazione_appaltante": stazione_appaltante,
-            "importo": importo,
-            "link_portale": link_portale or None,
-            "data_apertura_prevista": (
-                data_apertura_prevista
-            ),
-            "data_apertura_effettiva": (
-                data_apertura_effettiva
-            )
-        }
-
-        try:
-
-            crea_gara(
-                supabase,
-                azienda_id,
-                dati
-            )
-
-            st.success(
-                "Gara salvata correttamente."
-            )
-
-            st.rerun()
-
-        except Exception as e:
+        if not oggetto or not stazione_appaltante:
 
             st.error(
-                f"Errore nel salvataggio: {e}"
+                "Compila i campi obbligatori."
             )
+
+        else:
+
+            dati = {
+                "cig": cig or None,
+                "oggetto": oggetto,
+                "stazione_appaltante": stazione_appaltante,
+                "importo": importo,
+                "link_portale": link_portale or None,
+                "data_apertura_prevista": (
+                    data_apertura_prevista
+                ),
+                "data_apertura_effettiva": (
+                    data_apertura_effettiva
+                )
+            }
+
+            try:
+
+                crea_gara(
+                    supabase,
+                    azienda_id,
+                    dati
+                )
+
+                st.success(
+                    "Gara salvata correttamente."
+                )
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(
+                    f"Errore nel salvataggio: {e}"
+                )
+
 
 # =====================================================
 # ATTIVITÀ
