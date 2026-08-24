@@ -1,52 +1,47 @@
 import streamlit as st
-from supabase import create_client
+
+from services.supabase_client import get_supabase_client
+from services.auth import login
+from services.azienda import get_mia_azienda_id
 
 
 st.set_page_config(
-    page_title="GARA FOLLOW-UP - Test RLS",
-    page_icon="🔐"
+    page_title="GARA FOLLOW-UP",
+    page_icon="📋"
 )
+
 
 st.title("GARA FOLLOW-UP")
-st.subheader("Test autenticazione e RLS")
+st.subheader("Accesso")
 
 
 # -----------------------------------------------------
-# CONFIGURAZIONE SUPABASE
+# SUPABASE
 # -----------------------------------------------------
 
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
-
-# -----------------------------------------------------
-# CLIENT SUPABASE
-# -----------------------------------------------------
-
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY
-)
+supabase = get_supabase_client()
 
 
 # -----------------------------------------------------
 # LOGIN
 # -----------------------------------------------------
 
-st.write("### Login")
-
 email = st.text_input("Email")
-password = st.text_input("Password", type="password")
+password = st.text_input(
+    "Password",
+    type="password"
+)
 
 
 if st.button("Accedi"):
 
     try:
 
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        response = login(
+            supabase,
+            email,
+            password
+        )
 
         st.session_state["session"] = response.session
 
@@ -58,14 +53,10 @@ if st.button("Accedi"):
 
 
 # -----------------------------------------------------
-# TEST AUTENTICATO
+# AREA AUTENTICATA
 # -----------------------------------------------------
 
 if "session" in st.session_state:
-
-    session = st.session_state["session"]
-
-    st.write("### Sessione autenticata")
 
     st.success("Utente autenticato.")
 
@@ -73,51 +64,24 @@ if "session" in st.session_state:
 
         user = supabase.auth.get_user()
 
-        st.write("**Auth UID:**")
-        st.code(user.user.id)
+        st.write("### Utente")
 
-        # ---------------------------------------------
-        # TEST get_mia_azienda_id()
-        # ---------------------------------------------
-
-        result = supabase.rpc(
-            "get_mia_azienda_id"
-        ).execute()
-
-        st.write("**Azienda dell'utente:**")
-
-        st.code(str(result.data))
-
-        # ---------------------------------------------
-        # TEST RLS - AZIENDA
-        # ---------------------------------------------
-
-        aziende = (
-            supabase
-            .table("azienda")
-            .select("id, nome")
-            .execute()
+        st.write(
+            f"Auth UID: `{user.user.id}`"
         )
 
-        st.write("### Test RLS - azienda")
-
-        st.write(aziende.data)
-
-        # ---------------------------------------------
-        # TEST RLS - UTENTI
-        # ---------------------------------------------
-
-        utenti = (
+        azienda_id = get_mia_azienda_id(
             supabase
-            .table("utenti")
-            .select("id, azienda_id, nome, ruolo")
-            .execute()
         )
 
-        st.write("### Test RLS - utenti")
+        st.write("### Azienda")
 
-        st.write(utenti.data)
+        st.write(
+            f"Azienda ID: `{azienda_id}`"
+        )
 
     except Exception as e:
 
-        st.error(f"Errore durante il test: {e}")
+        st.error(
+            f"Errore durante il caricamento: {e}"
+        )
