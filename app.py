@@ -6,6 +6,7 @@ from services.azienda import (
     get_mia_azienda_id,
     get_mia_azienda
 )
+from services.gare import get_gare
 
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
