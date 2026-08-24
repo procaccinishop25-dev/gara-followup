@@ -109,6 +109,19 @@ except Exception as e:
 
     st.stop()
 
+# =====================================================
+# MESSAGGI
+# =====================================================
+
+if "messaggio_successo" in st.session_state:
+
+    st.success(
+        st.session_state["messaggio_successo"]
+    )
+
+    del st.session_state[
+        "messaggio_successo"
+    ]
 
 # =====================================================
 # SIDEBAR
@@ -264,7 +277,7 @@ elif pagina == "Gare":
                     dati
                 )
 
-                st.success(
+                st.session_state["messaggio_successo"] = (
                     "✅ Gara salvata correttamente."
                 )
 
@@ -582,7 +595,7 @@ elif pagina == "Gare":
                             dati_modifica
                         )
 
-                        st.success(
+                        st.session_state["messaggio_successo"] = (
                             "✅ Gara aggiornata correttamente."
                         )
 
