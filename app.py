@@ -257,10 +257,8 @@ elif pagina == "Gare":
                 )
 
                 st.success(
-                    "Gara salvata correttamente."
+                    "✅ Gara salvata correttamente."
                 )
-
-                st.rerun()
 
             except Exception as e:
 
