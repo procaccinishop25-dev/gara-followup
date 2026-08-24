@@ -7,81 +7,176 @@ from services.azienda import get_mia_azienda_id
 
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
-    page_icon="📋"
+    page_icon="📋",
+    layout="wide"
 )
 
 
-st.title("GARA FOLLOW-UP")
-st.subheader("Accesso")
-
-
-# -----------------------------------------------------
+# =====================================================
 # SUPABASE
-# -----------------------------------------------------
+# =====================================================
 
 supabase = get_supabase_client()
 
 
-# -----------------------------------------------------
+# =====================================================
 # LOGIN
-# -----------------------------------------------------
+# =====================================================
 
-email = st.text_input("Email")
-password = st.text_input(
-    "Password",
-    type="password"
-)
+if "session" not in st.session_state:
+
+    st.title("GARA FOLLOW-UP")
+
+    st.subheader("Accedi")
+
+    email = st.text_input("Email")
+
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
+
+    if st.button("Accedi"):
+
+        try:
+
+            response = login(
+                supabase,
+                email,
+                password
+            )
+
+            st.session_state["session"] = response.session
+
+            st.rerun()
+
+        except Exception as e:
+
+            st.error(
+                f"Login fallito: {e}"
+            )
+
+    st.stop()
 
 
-if st.button("Accedi"):
+# =====================================================
+# UTENTE AUTENTICATO
+# =====================================================
 
-    try:
+try:
 
-        response = login(
-            supabase,
-            email,
-            password
+    user = supabase.auth.get_user()
+
+    azienda_id = get_mia_azienda_id(
+        supabase
+    )
+
+except Exception as e:
+
+    st.error(
+        f"Errore autenticazione: {e}"
+    )
+
+    st.stop()
+
+
+# =====================================================
+# SIDEBAR
+# =====================================================
+
+with st.sidebar:
+
+    st.title("GARA FOLLOW-UP")
+
+    st.divider()
+
+    st.write("👤 Utente")
+
+    st.caption(
+        user.user.email
+    )
+
+    st.write("🏢 Azienda")
+
+    st.caption(
+        str(azienda_id)
+    )
+
+    st.divider()
+
+    pagina = st.radio(
+        "Navigazione",
+        [
+            "Dashboard",
+            "Gare",
+            "Attività"
+        ]
+    )
+
+
+# =====================================================
+# DASHBOARD
+# =====================================================
+
+if pagina == "Dashboard":
+
+    st.title("Dashboard")
+
+    st.subheader(
+        "Benvenuto in GARA FOLLOW-UP"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.metric(
+            "Gare",
+            "0"
         )
 
-        st.session_state["session"] = response.session
+    with col2:
 
-        st.success("Login riuscito.")
-
-    except Exception as e:
-
-        st.error(f"Login fallito: {e}")
-
-
-# -----------------------------------------------------
-# AREA AUTENTICATA
-# -----------------------------------------------------
-
-if "session" in st.session_state:
-
-    st.success("Utente autenticato.")
-
-    try:
-
-        user = supabase.auth.get_user()
-
-        st.write("### Utente")
-
-        st.write(
-            f"Auth UID: `{user.user.id}`"
+        st.metric(
+            "Attività aperte",
+            "0"
         )
 
-        azienda_id = get_mia_azienda_id(
-            supabase
+    with col3:
+
+        st.metric(
+            "Reminder",
+            "0"
         )
 
-        st.write("### Azienda")
+    st.divider()
 
-        st.write(
-            f"Azienda ID: `{azienda_id}`"
-        )
+    st.info(
+        "La dashboard verrà collegata ai dati reali nelle prossime fasi."
+    )
 
-    except Exception as e:
 
-        st.error(
-            f"Errore durante il caricamento: {e}"
-        )
+# =====================================================
+# GARE
+# =====================================================
+
+elif pagina == "Gare":
+
+    st.title("Gare")
+
+    st.info(
+        "Gestione gare in costruzione."
+    )
+
+
+# =====================================================
+# ATTIVITÀ
+# =====================================================
+
+elif pagina == "Attività":
+
+    st.title("Attività")
+
+    st.info(
+        "Gestione attività in costruzione."
+    )
