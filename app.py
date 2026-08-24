@@ -280,36 +280,117 @@ elif pagina == "Gare":
 
         for gara in gare:
 
-            with st.container(border=True):
+       with st.container(border=True):
 
-                col1, col2 = st.columns([3, 1])
+        col1, col2 = st.columns([3, 1])
 
-                with col1:
+        with col1:
 
-                    st.write(
-                        f"**{gara['oggetto']}**"
-                    )
+            st.write(
+                f"**{gara['oggetto']}**"
+            )
 
-                    st.caption(
-                        f"CIG: {gara.get('cig') or '-'}"
-                    )
+            st.caption(
+                f"CIG: {gara.get('cig') or '-'}"
+            )
 
-                    st.caption(
-                        f"Stazione appaltante: "
-                        f"{gara['stazione_appaltante']}"
-                    )
+            st.caption(
+                f"Stazione appaltante: "
+                f"{gara['stazione_appaltante']}"
+            )
 
-                with col2:
+        with col2:
 
-                    st.write(
-                        f"**{gara['stato']}**"
-                    )
+            st.write(
+                f"**{gara['stato']}**"
+            )
 
-                    if gara.get("importo") is not None:
+            if gara.get("importo") is not None:
 
-                        st.write(
-                            f"€ {gara['importo']:,.2f}"
-                        )
+                st.write(
+                    f"€ {gara['importo']:,.2f}"
+                )
+
+            if st.button(
+                "Apri gara",
+                key=f"apri_{gara['id']}"
+            ):
+
+                st.session_state["gara_selezionata"] = gara["id"]
+
+                st.rerun()
+
+if st.session_state.get("gara_selezionata"):
+
+    gara_id = st.session_state["gara_selezionata"]
+
+    gara_selezionata = next(
+        (
+            gara
+            for gara in gare
+            if gara["id"] == gara_id
+        ),
+        None
+    )
+
+    if gara_selezionata:
+
+        st.divider()
+
+        st.subheader(
+            "Dettaglio gara"
+        )
+
+        st.write(
+            f"### {gara_selezionata['oggetto']}"
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.write(
+                f"**CIG:** "
+                f"{gara_selezionata.get('cig') or '-'}"
+            )
+
+            st.write(
+                f"**Stazione appaltante:** "
+                f"{gara_selezionata['stazione_appaltante']}"
+            )
+
+            st.write(
+                f"**Stato:** "
+                f"{gara_selezionata['stato']}"
+            )
+
+        with col2:
+
+            importo_gara = gara_selezionata.get(
+                "importo"
+            )
+
+            if importo_gara is not None:
+
+                st.write(
+                    f"**Importo:** "
+                    f"€ {importo_gara:,.2f}"
+                )
+
+            st.write(
+                f"**Link portale:** "
+                f"{gara_selezionata.get('link_portale') or '-'}"
+            )
+
+            st.write(
+                f"**Apertura prevista:** "
+                f"{gara_selezionata.get('data_apertura_prevista') or '-'}"
+            )
+
+            st.write(
+                f"**Apertura effettiva:** "
+                f"{gara_selezionata.get('data_apertura_effettiva') or '-'}"
+            )
 
 # =====================================================
 # ATTIVITÀ
