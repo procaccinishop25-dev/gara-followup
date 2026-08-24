@@ -114,7 +114,7 @@ with st.sidebar:
     st.write("🏢 Azienda")
 
     st.caption(
-        str(nome)
+        azienda["nome"]
     )
 
     st.divider()
