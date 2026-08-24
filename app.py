@@ -3,7 +3,6 @@ import streamlit as st
 from services.supabase_client import get_supabase_client
 from services.auth import login
 from services.azienda import (
-    get_mia_azienda_id,
     get_mia_azienda
 )
 from services.gare import (
@@ -11,6 +10,10 @@ from services.gare import (
     crea_gara
 )
 
+
+# =====================================================
+# CONFIGURAZIONE
+# =====================================================
 
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
@@ -43,7 +46,9 @@ if "session" not in st.session_state:
 
     st.subheader("Accedi")
 
-    email = st.text_input("Email")
+    email = st.text_input(
+        "Email"
+    )
 
     password = st.text_input(
         "Password",
@@ -190,6 +195,10 @@ elif pagina == "Gare":
 
     st.title("Gare")
 
+    # -------------------------------------------------
+    # NUOVA GARA
+    # -------------------------------------------------
+
     st.subheader("Nuova gara")
 
     cig = st.text_input(
@@ -260,11 +269,17 @@ elif pagina == "Gare":
                     "✅ Gara salvata correttamente."
                 )
 
+                st.rerun()
+
             except Exception as e:
 
                 st.error(
                     f"Errore nel salvataggio: {e}"
                 )
+
+    # -------------------------------------------------
+    # ELENCO GARE
+    # -------------------------------------------------
 
     st.divider()
 
@@ -280,117 +295,164 @@ elif pagina == "Gare":
 
         for gara in gare:
 
-       with st.container(border=True):
+            with st.container(border=True):
 
-        col1, col2 = st.columns([3, 1])
-
-        with col1:
-
-            st.write(
-                f"**{gara['oggetto']}**"
-            )
-
-            st.caption(
-                f"CIG: {gara.get('cig') or '-'}"
-            )
-
-            st.caption(
-                f"Stazione appaltante: "
-                f"{gara['stazione_appaltante']}"
-            )
-
-        with col2:
-
-            st.write(
-                f"**{gara['stato']}**"
-            )
-
-            if gara.get("importo") is not None:
-
-                st.write(
-                    f"€ {gara['importo']:,.2f}"
+                col1, col2 = st.columns(
+                    [3, 1]
                 )
 
-            if st.button(
-                "Apri gara",
-                key=f"apri_{gara['id']}"
-            ):
+                with col1:
 
-                st.session_state["gara_selezionata"] = gara["id"]
+                    st.write(
+                        f"**{gara['oggetto']}**"
+                    )
 
-                st.rerun()
+                    st.caption(
+                        f"CIG: {gara.get('cig') or '-'}"
+                    )
 
-if st.session_state.get("gara_selezionata"):
+                    st.caption(
+                        "Stazione appaltante: "
+                        f"{gara['stazione_appaltante']}"
+                    )
 
-    gara_id = st.session_state["gara_selezionata"]
+                with col2:
 
-    gara_selezionata = next(
-        (
-            gara
-            for gara in gare
-            if gara["id"] == gara_id
-        ),
-        None
+                    st.write(
+                        f"**{gara['stato']}**"
+                    )
+
+                    if gara.get("importo") is not None:
+
+                        st.write(
+                            f"€ {gara['importo']:,.2f}"
+                        )
+
+                    if st.button(
+                        "Apri gara",
+                        key=f"apri_{gara['id']}"
+                    ):
+
+                        st.session_state[
+                            "gara_selezionata"
+                        ] = gara["id"]
+
+                        st.rerun()
+
+    # -------------------------------------------------
+    # DETTAGLIO GARA
+    # -------------------------------------------------
+
+    gara_id = st.session_state.get(
+        "gara_selezionata"
     )
 
-    if gara_selezionata:
+    if gara_id:
 
-        st.divider()
-
-        st.subheader(
-            "Dettaglio gara"
+        gara_selezionata = next(
+            (
+                gara
+                for gara in gare
+                if gara["id"] == gara_id
+            ),
+            None
         )
 
-        st.write(
-            f"### {gara_selezionata['oggetto']}"
-        )
+        if gara_selezionata:
 
-        col1, col2 = st.columns(2)
+            st.divider()
 
-        with col1:
-
-            st.write(
-                f"**CIG:** "
-                f"{gara_selezionata.get('cig') or '-'}"
+            st.subheader(
+                "Dettaglio gara"
             )
 
             st.write(
-                f"**Stazione appaltante:** "
-                f"{gara_selezionata['stazione_appaltante']}"
+                f"### {gara_selezionata['oggetto']}"
             )
 
-            st.write(
-                f"**Stato:** "
-                f"{gara_selezionata['stato']}"
-            )
+            col1, col2 = st.columns(2)
 
-        with col2:
-
-            importo_gara = gara_selezionata.get(
-                "importo"
-            )
-
-            if importo_gara is not None:
+            with col1:
 
                 st.write(
-                    f"**Importo:** "
-                    f"€ {importo_gara:,.2f}"
+                    "**CIG:** "
+                    f"{gara_selezionata.get('cig') or '-'}"
+                )
+
+                st.write(
+                    "**Stazione appaltante:** "
+                    f"{gara_selezionata['stazione_appaltante']}"
+                )
+
+                st.write(
+                    "**Stato:** "
+                    f"{gara_selezionata['stato']}"
+                )
+
+                st.write(
+                    "**Ribasso proprio:** "
+                    f"{gara_selezionata.get('ribasso_proprio') or '-'}"
+                )
+
+            with col2:
+
+                importo_gara = gara_selezionata.get(
+                    "importo"
+                )
+
+                if importo_gara is not None:
+
+                    st.write(
+                        "**Importo:** "
+                        f"€ {importo_gara:,.2f}"
+                    )
+
+                else:
+
+                    st.write(
+                        "**Importo:** -"
+                    )
+
+                st.write(
+                    "**Link portale:** "
+                    f"{gara_selezionata.get('link_portale') or '-'}"
+                )
+
+                st.write(
+                    "**Apertura prevista:** "
+                    f"{gara_selezionata.get('data_apertura_prevista') or '-'}"
+                )
+
+                st.write(
+                    "**Apertura effettiva:** "
+                    f"{gara_selezionata.get('data_apertura_effettiva') or '-'}"
+                )
+
+                st.write(
+                    "**Vincitore:** "
+                    f"{gara_selezionata.get('vincitore') or '-'}"
+                )
+
+                st.write(
+                    "**Ribasso vincitore:** "
+                    f"{gara_selezionata.get('ribasso_vincitore') or '-'}"
                 )
 
             st.write(
-                f"**Link portale:** "
-                f"{gara_selezionata.get('link_portale') or '-'}"
+                "**Ultimo aggiornamento:** "
+                f"{gara_selezionata.get('ultimo_aggiornamento') or '-'}"
             )
 
-            st.write(
-                f"**Apertura prevista:** "
-                f"{gara_selezionata.get('data_apertura_prevista') or '-'}"
+        else:
+
+            st.warning(
+                "La gara selezionata non è più disponibile."
             )
 
-            st.write(
-                f"**Apertura effettiva:** "
-                f"{gara_selezionata.get('data_apertura_effettiva') or '-'}"
-            )
+            del st.session_state[
+                "gara_selezionata"
+            ]
+
 
 # =====================================================
 # ATTIVITÀ
