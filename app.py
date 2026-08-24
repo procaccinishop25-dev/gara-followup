@@ -2,15 +2,12 @@ import streamlit as st
 
 from services.supabase_client import get_supabase_client
 from services.auth import login
-from services.azienda import (
-    get_mia_azienda
-)
+from services.azienda import get_mia_azienda
 from services.gare import (
     get_gare,
     crea_gara,
     aggiorna_gara
 )
-
 
 
 # =====================================================
@@ -197,9 +194,9 @@ elif pagina == "Gare":
 
     st.title("Gare")
 
-    # -------------------------------------------------
+    # =================================================
     # NUOVA GARA
-    # -------------------------------------------------
+    # =================================================
 
     st.subheader("Nuova gara")
 
@@ -279,9 +276,9 @@ elif pagina == "Gare":
                     f"Errore nel salvataggio: {e}"
                 )
 
-    # -------------------------------------------------
+    # =================================================
     # ELENCO GARE
-    # -------------------------------------------------
+    # =================================================
 
     st.divider()
 
@@ -341,9 +338,9 @@ elif pagina == "Gare":
 
                         st.rerun()
 
-    # -------------------------------------------------
+    # =================================================
     # DETTAGLIO GARA
-    # -------------------------------------------------
+    # =================================================
 
     gara_id = st.session_state.get(
         "gara_selezionata"
@@ -360,229 +357,58 @@ elif pagina == "Gare":
             None
         )
 
-if gara_selezionata:
+        if gara_selezionata:
 
-    st.divider()
+            st.divider()
 
-    st.subheader(
-        "Dettaglio gara"
-    )
-
-    st.write(
-        f"### {gara_selezionata['oggetto']}"
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        st.write(
-            "**CIG:** "
-            f"{gara_selezionata.get('cig') or '-'}"
-        )
-
-        st.write(
-            "**Stazione appaltante:** "
-            f"{gara_selezionata['stazione_appaltante']}"
-        )
-
-        st.write(
-            "**Stato:** "
-            f"{gara_selezionata['stato']}"
-        )
-
-        st.write(
-            "**Ribasso proprio:** "
-            f"{gara_selezionata.get('ribasso_proprio') or '-'}"
-        )
-
-    with col2:
-
-        importo_gara = gara_selezionata.get(
-            "importo"
-        )
-
-        if importo_gara is not None:
+            st.subheader(
+                "Dettaglio gara"
+            )
 
             st.write(
-                "**Importo:** "
-                f"€ {importo_gara:,.2f}"
+                f"### {gara_selezionata['oggetto']}"
             )
 
-        else:
+            # -----------------------------------------
+            # DATI GARA
+            # -----------------------------------------
 
-            st.write(
-                "**Importo:** -"
-            )
+            col1, col2 = st.columns(2)
 
-        st.write(
-            "**Link portale:** "
-            f"{gara_selezionata.get('link_portale') or '-'}"
-        )
+            with col1:
 
-        st.write(
-            "**Apertura prevista:** "
-            f"{gara_selezionata.get('data_apertura_prevista') or '-'}"
-        )
-
-        st.write(
-            "**Apertura effettiva:** "
-            f"{gara_selezionata.get('data_apertura_effettiva') or '-'}"
-        )
-
-        st.write(
-            "**Vincitore:** "
-            f"{gara_selezionata.get('vincitore') or '-'}"
-        )
-
-        st.write(
-            "**Ribasso vincitore:** "
-            f"{gara_selezionata.get('ribasso_vincitore') or '-'}"
-        )
-
-    st.write(
-        "**Ultimo aggiornamento:** "
-        f"{gara_selezionata.get('ultimo_aggiornamento') or '-'}"
-    )
-
-    st.divider()
-
-    st.subheader(
-        "Modifica gara"
-    )
-
-    modifica_cig = st.text_input(
-        "CIG",
-        value=gara_selezionata.get("cig") or "",
-        key="modifica_cig"
-    )
-
-    modifica_oggetto = st.text_input(
-        "Oggetto",
-        value=gara_selezionata.get("oggetto") or "",
-        key="modifica_oggetto"
-    )
-
-    modifica_stazione = st.text_input(
-        "Stazione appaltante",
-        value=gara_selezionata.get(
-            "stazione_appaltante"
-        ) or "",
-        key="modifica_stazione"
-    )
-
-    modifica_importo = st.number_input(
-        "Importo",
-        min_value=0.0,
-        value=float(
-            gara_selezionata.get("importo") or 0
-        ),
-        step=1000.0,
-        key="modifica_importo"
-    )
-
-    modifica_link = st.text_input(
-        "Link portale",
-        value=gara_selezionata.get(
-            "link_portale"
-        ) or "",
-        key="modifica_link"
-    )
-
-    modifica_vincitore = st.text_input(
-        "Vincitore",
-        value=gara_selezionata.get(
-            "vincitore"
-        ) or "",
-        key="modifica_vincitore"
-    )
-
-    modifica_ribasso_proprio = st.text_input(
-        "Ribasso proprio",
-        value=gara_selezionata.get(
-            "ribasso_proprio"
-        ) or "",
-        key="modifica_ribasso_proprio"
-    )
-
-    modifica_ribasso_vincitore = st.text_input(
-        "Ribasso vincitore",
-        value=gara_selezionata.get(
-            "ribasso_vincitore"
-        ) or "",
-        key="modifica_ribasso_vincitore"
-    )
-
-    modifica_ultimo_aggiornamento = st.text_area(
-        "Ultimo aggiornamento",
-        value=gara_selezionata.get(
-            "ultimo_aggiornamento"
-        ) or "",
-        key="modifica_ultimo_aggiornamento"
-    )
-
-    if st.button(
-        "Salva modifiche",
-        key="salva_modifiche_gara"
-    ):
-
-        if not modifica_oggetto or not modifica_stazione:
-
-            st.error(
-                "Oggetto e stazione appaltante sono obbligatori."
-            )
-
-        else:
-
-            dati_modifica = {
-                "cig": modifica_cig or None,
-                "oggetto": modifica_oggetto,
-                "stazione_appaltante": modifica_stazione,
-                "importo": modifica_importo,
-                "link_portale": modifica_link or None,
-                "vincitore": modifica_vincitore or None,
-                "ribasso_proprio": (
-                    modifica_ribasso_proprio or None
-                ),
-                "ribasso_vincitore": (
-                    modifica_ribasso_vincitore or None
-                ),
-                "ultimo_aggiornamento": (
-                    modifica_ultimo_aggiornamento or None
-                )
-            }
-
-            try:
-
-                aggiorna_gara(
-                    supabase,
-                    azienda_id,
-                    gara_id,
-                    dati_modifica
+                st.write(
+                    "**CIG:** "
+                    f"{gara_selezionata.get('cig') or '-'}"
                 )
 
-                st.success(
-                    "✅ Gara aggiornata correttamente."
+                st.write(
+                    "**Stazione appaltante:** "
+                    f"{gara_selezionata['stazione_appaltante']}"
                 )
 
-                st.rerun()
-
-            except Exception as e:
-
-                st.error(
-                    f"Errore aggiornamento gara: {e}"
+                st.write(
+                    "**Stato:** "
+                    f"{gara_selezionata['stato']}"
                 )
 
-else:
+                st.write(
+                    "**Ribasso proprio:** "
+                    f"{gara_selezionata.get('ribasso_proprio') or '-'}"
+                )
 
-    st.warning(
-        "La gara selezionata non è più disponibile."
-    )
+            with col2:
 
-    del st.session_state[
-        "gara_selezionata"
-    ]
+                importo_gara = gara_selezionata.get(
+                    "importo"
+                )
 
+                if importo_gara is not None:
+
+                    st.write(
+                        "**Importo:** "
+                        f"€ {importo_gara:,.2f}"
+                    )
 
                 else:
 
@@ -619,6 +445,154 @@ else:
                 "**Ultimo aggiornamento:** "
                 f"{gara_selezionata.get('ultimo_aggiornamento') or '-'}"
             )
+
+            # -----------------------------------------
+            # MODIFICA GARA
+            # -----------------------------------------
+
+            st.divider()
+
+            st.subheader(
+                "Modifica gara"
+            )
+
+            modifica_cig = st.text_input(
+                "CIG",
+                value=gara_selezionata.get(
+                    "cig"
+                ) or "",
+                key="modifica_cig"
+            )
+
+            modifica_oggetto = st.text_input(
+                "Oggetto",
+                value=gara_selezionata.get(
+                    "oggetto"
+                ) or "",
+                key="modifica_oggetto"
+            )
+
+            modifica_stazione = st.text_input(
+                "Stazione appaltante",
+                value=gara_selezionata.get(
+                    "stazione_appaltante"
+                ) or "",
+                key="modifica_stazione"
+            )
+
+            modifica_importo = st.number_input(
+                "Importo",
+                min_value=0.0,
+                value=float(
+                    gara_selezionata.get(
+                        "importo"
+                    ) or 0
+                ),
+                step=1000.0,
+                key="modifica_importo"
+            )
+
+            modifica_link = st.text_input(
+                "Link portale",
+                value=gara_selezionata.get(
+                    "link_portale"
+                ) or "",
+                key="modifica_link"
+            )
+
+            modifica_vincitore = st.text_input(
+                "Vincitore",
+                value=gara_selezionata.get(
+                    "vincitore"
+                ) or "",
+                key="modifica_vincitore"
+            )
+
+            modifica_ribasso_proprio = st.text_input(
+                "Ribasso proprio",
+                value=gara_selezionata.get(
+                    "ribasso_proprio"
+                ) or "",
+                key="modifica_ribasso_proprio"
+            )
+
+            modifica_ribasso_vincitore = st.text_input(
+                "Ribasso vincitore",
+                value=gara_selezionata.get(
+                    "ribasso_vincitore"
+                ) or "",
+                key="modifica_ribasso_vincitore"
+            )
+
+            modifica_ultimo_aggiornamento = st.text_area(
+                "Ultimo aggiornamento",
+                value=gara_selezionata.get(
+                    "ultimo_aggiornamento"
+                ) or "",
+                key="modifica_ultimo_aggiornamento"
+            )
+
+            if st.button(
+                "Salva modifiche",
+                key="salva_modifiche_gara"
+            ):
+
+                if (
+                    not modifica_oggetto
+                    or not modifica_stazione
+                ):
+
+                    st.error(
+                        "Oggetto e stazione appaltante sono obbligatori."
+                    )
+
+                else:
+
+                    dati_modifica = {
+                        "cig": modifica_cig or None,
+                        "oggetto": modifica_oggetto,
+                        "stazione_appaltante": modifica_stazione,
+                        "importo": modifica_importo,
+                        "link_portale": (
+                            modifica_link or None
+                        ),
+                        "vincitore": (
+                            modifica_vincitore or None
+                        ),
+                        "ribasso_proprio": (
+                            modifica_ribasso_proprio
+                            or None
+                        ),
+                        "ribasso_vincitore": (
+                            modifica_ribasso_vincitore
+                            or None
+                        ),
+                        "ultimo_aggiornamento": (
+                            modifica_ultimo_aggiornamento
+                            or None
+                        )
+                    }
+
+                    try:
+
+                        aggiorna_gara(
+                            supabase,
+                            azienda_id,
+                            gara_id,
+                            dati_modifica
+                        )
+
+                        st.success(
+                            "✅ Gara aggiornata correttamente."
+                        )
+
+                        st.rerun()
+
+                    except Exception as e:
+
+                        st.error(
+                            f"Errore aggiornamento gara: {e}"
+                        )
 
         else:
 
