@@ -6,7 +6,10 @@ from services.azienda import (
     get_mia_azienda_id,
     get_mia_azienda
 )
-from services.gare import get_gare
+from services.gare import (
+    get_gare,
+    crea_gara
+)
 
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
@@ -222,10 +225,49 @@ elif pagina == "Gare":
         value=None
     )
 
-    st.button(
-        "Salva gara"
-    )
+    if st.button("Salva gara"):
 
+    if not oggetto or not stazione_appaltante:
+
+        st.error(
+            "Compila i campi obbligatori."
+        )
+
+    else:
+
+        dati = {
+            "cig": cig or None,
+            "oggetto": oggetto,
+            "stazione_appaltante": stazione_appaltante,
+            "importo": importo,
+            "link_portale": link_portale or None,
+            "data_apertura_prevista": (
+                data_apertura_prevista
+            ),
+            "data_apertura_effettiva": (
+                data_apertura_effettiva
+            )
+        }
+
+        try:
+
+            crea_gara(
+                supabase,
+                azienda_id,
+                dati
+            )
+
+            st.success(
+                "Gara salvata correttamente."
+            )
+
+            st.rerun()
+
+        except Exception as e:
+
+            st.error(
+                f"Errore nel salvataggio: {e}"
+            )
 
 
 # =====================================================
