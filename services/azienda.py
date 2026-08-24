@@ -7,4 +7,7 @@ def get_mia_azienda_id(supabase: Client):
         "get_mia_azienda_id"
     ).execute()
 
-    return response.data
+    return {
+        "data": response.data,
+        "type": type(response.data).__name__
+    }
