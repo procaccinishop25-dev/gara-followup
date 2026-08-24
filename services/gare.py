@@ -1,5 +1,6 @@
 from supabase import Client
 
+
 def get_gare(
     supabase: Client,
     azienda_id: str
@@ -15,6 +16,7 @@ def get_gare(
     )
 
     return response.data
+
 
 def crea_gara(
     supabase: Client,
@@ -54,4 +56,3 @@ def crea_gara(
     )
 
     return response.data
-
