@@ -16,12 +16,30 @@ def get_gare(
 
     return response.data
 
-
 def crea_gara(
     supabase: Client,
     azienda_id: str,
     dati: dict
 ):
+
+    cig = dati.get("cig")
+
+    if cig:
+
+        controllo = (
+            supabase
+            .table("gare")
+            .select("id")
+            .eq("azienda_id", azienda_id)
+            .eq("cig", cig)
+            .execute()
+        )
+
+        if controllo.data:
+
+            raise ValueError(
+                "Esiste già una gara con questo CIG."
+            )
 
     dati_gara = {
         **dati,
@@ -36,3 +54,4 @@ def crea_gara(
     )
 
     return response.data
+
