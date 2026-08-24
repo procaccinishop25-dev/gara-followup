@@ -153,7 +153,7 @@ if pagina == "Dashboard":
 
         st.metric(
             "Gare",
-            len(gare)
+            len["gare"]
         )
 
     with col2:
