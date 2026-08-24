@@ -80,9 +80,10 @@ try:
 
     user = supabase.auth.get_user()
 
-    azienda_id = get_mia_azienda_id(
+    azienda = get_mia_azienda(
         supabase
     )
+
     azienda_id = azienda["id"]
     
 except Exception as e:
