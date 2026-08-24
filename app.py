@@ -93,7 +93,7 @@ with st.sidebar:
     st.write("👤 Utente")
 
     st.caption(
-        user.user.email
+        user.email
     )
 
     st.write("🏢 Azienda")
