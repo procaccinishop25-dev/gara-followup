@@ -33,5 +33,3 @@ def crea_gara(
     )
 
     return response.data
-
-    return response.data
