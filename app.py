@@ -139,6 +139,10 @@ with st.sidebar:
 # DASHBOARD
 # =====================================================
 
+# =====================================================
+# DASHBOARD
+# =====================================================
+
 if pagina == "Dashboard":
 
     st.title("Dashboard")
@@ -149,12 +153,12 @@ if pagina == "Dashboard":
 
     col1, col2, col3 = st.columns(3)
 
-with col1:
+    with col1:
 
-    st.metric(
-        "Gare",
-        len(gare)
-    )
+        st.metric(
+            "Gare",
+            len(gare)
+        )
 
     with col2:
 
@@ -175,7 +179,6 @@ with col1:
     st.info(
         "La dashboard verrà collegata ai dati reali nelle prossime fasi."
     )
-
 
 # =====================================================
 # GARE
