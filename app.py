@@ -188,9 +188,44 @@ elif pagina == "Gare":
 
     st.title("Gare")
 
-    st.info(
-        "Gestione gare in costruzione."
+    st.subheader("Nuova gara")
+
+    cig = st.text_input(
+        "CIG"
     )
+
+    oggetto = st.text_input(
+        "Oggetto *"
+    )
+
+    stazione_appaltante = st.text_input(
+        "Stazione appaltante *"
+    )
+
+    importo = st.number_input(
+        "Importo",
+        min_value=0.0,
+        step=1000.0
+    )
+
+    link_portale = st.text_input(
+        "Link portale"
+    )
+
+    data_apertura_prevista = st.date_input(
+        "Data apertura prevista",
+        value=None
+    )
+
+    data_apertura_effettiva = st.date_input(
+        "Data apertura effettiva",
+        value=None
+    )
+
+    st.button(
+        "Salva gara"
+    )
+
 
 
 # =====================================================
