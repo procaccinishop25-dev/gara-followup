@@ -2,8 +2,10 @@ import streamlit as st
 
 from services.supabase_client import get_supabase_client
 from services.auth import login
-from services.azienda import get_mia_azienda_id
-
+from services.azienda import (
+    get_mia_azienda_id,
+    get_mia_azienda
+)
 
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
@@ -81,7 +83,8 @@ try:
     azienda_id = get_mia_azienda_id(
         supabase
     )
-
+    azienda_id = azienda["id"]
+    
 except Exception as e:
 
     st.error(
@@ -110,7 +113,7 @@ with st.sidebar:
     st.write("🏢 Azienda")
 
     st.caption(
-        str(azienda_id)
+        str(nome)
     )
 
     st.divider()
