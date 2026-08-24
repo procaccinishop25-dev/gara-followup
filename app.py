@@ -91,8 +91,6 @@ try:
         supabase,
         azienda_id
     )
-    st.write("DEBUG GARE:", gare)
-    st.write("DEBUG TIPO:", type(gare).__name__)
 
 except Exception as e:
     
