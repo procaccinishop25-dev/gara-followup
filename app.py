@@ -87,8 +87,13 @@ try:
 
     azienda_id = azienda["id"]
     
+    gare = get_gare(
+        supabase,
+        azienda_id
+    )
+    
 except Exception as e:
-
+    
     st.error(
         f"Errore autenticazione: {e}"
     )
