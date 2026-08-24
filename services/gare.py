@@ -14,6 +14,10 @@ def get_gare(
         .order("created_at", desc=True)
         .execute()
     )
+
+    return response.data
+
+
 def crea_gara(
     supabase: Client,
     azienda_id: str,
