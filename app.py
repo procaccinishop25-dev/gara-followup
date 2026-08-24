@@ -18,6 +18,12 @@ st.set_page_config(
 
 supabase = get_supabase_client()
 
+if "session" in st.session_state:
+
+    supabase.auth.set_session(
+        st.session_state["session"].access_token,
+        st.session_state["session"].refresh_token
+    )
 
 # =====================================================
 # LOGIN
