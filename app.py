@@ -521,10 +521,11 @@ elif pagina == "Gare":
 
             stati_gara = [
                 "IN_ATTESA_APERTURA",
-                "APERTA",
-                "AGGIUDICATA",
+                "BUSTE_APERTE",
+                "VINTA",
                 "NON_AGGIUDICATA",
-                "ANNULLATA"
+                "PERSA"
+                "CHIUSE"
             ]
 
             stato_attuale = gara_selezionata.get(
