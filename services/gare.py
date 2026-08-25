@@ -62,13 +62,39 @@ def aggiorna_gara(
     dati: dict
 ):
 
-    response = (
-        supabase
-        .table("gare")
-        .update(dati)
-        .eq("id", gara_id)
-        .eq("azienda_id", azienda_id)
-        .execute()
-    )
+    response = supabase.rpc(
+        "aggiorna_dati_gara",
+        {
+            "p_gara_id": gara_id,
+            "p_cig": dati.get("cig"),
+            "p_oggetto": dati.get("oggetto"),
+            "p_stazione_appaltante": dati.get(
+                "stazione_appaltante"
+            ),
+            "p_importo": dati.get("importo"),
+            "p_link_portale": dati.get(
+                "link_portale"
+            ),
+            "p_data_apertura_prevista": dati.get(
+                "data_apertura_prevista"
+            ),
+            "p_data_apertura_effettiva": dati.get(
+                "data_apertura_effettiva"
+            ),
+            "p_ribasso_proprio": dati.get(
+                "ribasso_proprio"
+            ),
+            "p_vincitore": dati.get(
+                "vincitore"
+            ),
+            "p_ribasso_vincitore": dati.get(
+                "ribasso_vincitore"
+            ),
+            "p_ultimo_aggiornamento": dati.get(
+                "ultimo_aggiornamento"
+            )
+        }
+    ).execute()
 
     return response.data
+
