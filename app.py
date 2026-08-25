@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import date
 
 from services.supabase_client import get_supabase_client
 from services.auth import login
@@ -6,7 +7,7 @@ from services.azienda import get_mia_azienda
 from services.gare import (
     get_gare,
     crea_gara,
-    aggiorna_gara
+    aggiorna_gara,
 )
 
 
@@ -17,7 +18,7 @@ from services.gare import (
 st.set_page_config(
     page_title="GARA FOLLOW-UP",
     page_icon="📋",
-    layout="wide"
+    layout="wide",
 )
 
 
@@ -27,19 +28,23 @@ st.set_page_config(
 
 supabase = get_supabase_client()
 
+
+# =====================================================
+# SESSIONE
+# =====================================================
+
 if "session" in st.session_state:
 
     try:
 
         supabase.auth.set_session(
             st.session_state["session"].access_token,
-            st.session_state["session"].refresh_token
+            st.session_state["session"].refresh_token,
         )
 
     except Exception:
 
         del st.session_state["session"]
-
         st.rerun()
 
 
@@ -49,7 +54,7 @@ if "session" in st.session_state:
 
 if "session" not in st.session_state:
 
-    st.title("GARA FOLLOW-UP")
+    st.title("📋 GARA FOLLOW-UP")
 
     st.subheader("Accedi")
 
@@ -59,12 +64,13 @@ if "session" not in st.session_state:
 
     password = st.text_input(
         "Password",
-        type="password"
+        type="password",
     )
 
     if st.button(
         "Accedi",
-        type="primary"
+        type="primary",
+        use_container_width=True,
     ):
 
         if not email or not password:
@@ -80,16 +86,16 @@ if "session" not in st.session_state:
                 response = login(
                     supabase,
                     email,
-                    password
+                    password,
                 )
 
-                st.session_state[
-                    "session"
-                ] = response.session
+                st.session_state["session"] = (
+                    response.session
+                )
 
                 supabase.auth.set_session(
                     response.session.access_token,
-                    response.session.refresh_token
+                    response.session.refresh_token,
                 )
 
                 st.rerun()
@@ -104,7 +110,7 @@ if "session" not in st.session_state:
 
 
 # =====================================================
-# MESSAGGI
+# MESSAGGIO SUCCESSO
 # =====================================================
 
 if "messaggio_successo" in st.session_state:
@@ -119,18 +125,14 @@ if "messaggio_successo" in st.session_state:
 
 
 # =====================================================
-# UTENTE AUTENTICATO
+# CARICAMENTO UTENTE / AZIENDA
 # =====================================================
 
 try:
 
     user_response = supabase.auth.get_user()
 
-    if not user_response or not user_response.user:
-
-        del st.session_state["session"]
-
-        st.rerun()
+    user = user_response.user
 
     azienda = get_mia_azienda(
         supabase
@@ -139,7 +141,7 @@ try:
     if not azienda:
 
         st.error(
-            "Azienda dell'utente non trovata."
+            "Nessuna azienda associata all'utente."
         )
 
         st.stop()
@@ -148,16 +150,240 @@ try:
 
     gare = get_gare(
         supabase,
-        azienda_id
+        azienda_id,
     )
 
 except Exception as e:
 
     st.error(
-        f"Errore autenticazione: {e}"
+        f"Errore caricamento dati: {e}"
     )
 
     st.stop()
+
+
+# =====================================================
+# FUNZIONI DATI
+# =====================================================
+
+def get_attivita():
+
+    if not gare:
+        return []
+
+    gara_ids = [
+        gara["id"]
+        for gara in gare
+    ]
+
+    response = (
+        supabase
+        .table("attivita")
+        .select("*")
+        .in_("gara_id", gara_ids)
+        .order(
+            "data_prevista",
+            desc=False,
+        )
+        .execute()
+    )
+
+    return response.data or []
+
+
+def get_reminder():
+
+    attivita = get_attivita()
+
+    if not attivita:
+        return []
+
+    attivita_ids = [
+        attivita_item["id"]
+        for attivita_item in attivita
+    ]
+
+    response = (
+        supabase
+        .table("reminder")
+        .select("*")
+        .in_(
+            "attivita_id",
+            attivita_ids,
+        )
+        .order(
+            "data_prevista",
+            desc=False,
+        )
+        .execute()
+    )
+
+    return response.data or []
+
+
+def get_storico(gara_id):
+
+    response = (
+        supabase
+        .table("storico_stati")
+        .select(
+            "id, gara_id, stato_precedente, "
+            "nuovo_stato, created_at"
+        )
+        .eq(
+            "gara_id",
+            gara_id,
+        )
+        .order(
+            "created_at",
+            desc=True,
+        )
+        .execute()
+    )
+
+    return response.data or []
+
+
+def aggiorna_attivita(
+    attivita_id,
+    stato_attivita,
+):
+
+    response = (
+        supabase
+        .table("attivita")
+        .update(
+            {
+                "stato_attivita": stato_attivita,
+                "updated_at": "now()",
+            }
+        )
+        .eq(
+            "id",
+            attivita_id,
+        )
+        .execute()
+    )
+
+    return response.data
+
+
+def aggiorna_reminder(
+    attivita_id,
+    stato,
+):
+
+    response = (
+        supabase
+        .table("reminder")
+        .update(
+            {
+                "stato": stato,
+            }
+        )
+        .eq(
+            "attivita_id",
+            attivita_id,
+        )
+        .eq(
+            "stato",
+            "PENDENTE",
+        )
+        .execute()
+    )
+
+    return response.data
+
+
+def chiudi_gara(
+    gara_id,
+):
+
+    response = supabase.rpc(
+        "chiudi_gara",
+        {
+            "p_gara_id": gara_id,
+        },
+    ).execute()
+
+    return response.data
+
+
+def riapri_gara(
+    gara_id,
+):
+
+    response = supabase.rpc(
+        "riapri_gara",
+        {
+            "p_gara_id": gara_id,
+        },
+    ).execute()
+
+    return response.data
+
+
+# =====================================================
+# DATI WORKFLOW
+# =====================================================
+
+try:
+
+    attivita = get_attivita()
+
+except Exception as e:
+
+    attivita = []
+
+    st.warning(
+        f"Impossibile caricare le attività: {e}"
+    )
+
+
+try:
+
+    reminder = get_reminder()
+
+except Exception as e:
+
+    reminder = []
+
+    st.warning(
+        f"Impossibile caricare i reminder: {e}"
+    )
+
+
+# =====================================================
+# STATISTICHE
+# =====================================================
+
+attivita_aperte = [
+    item
+    for item in attivita
+    if item.get("stato_attivita") == "APERTA"
+]
+
+reminder_pendenti = [
+    item
+    for item in reminder
+    if item.get("stato") == "PENDENTE"
+]
+
+oggi = date.today()
+
+attivita_scadute = [
+    item
+    for item in attivita_aperte
+    if item.get("data_prevista")
+    and str(item["data_prevista"]) < str(oggi)
+]
+
+reminder_scaduti = [
+    item
+    for item in reminder_pendenti
+    if item.get("data_prevista")
+    and str(item["data_prevista"]) < str(oggi)
+]
 
 
 # =====================================================
@@ -166,20 +392,28 @@ except Exception as e:
 
 with st.sidebar:
 
-    st.title("GARA FOLLOW-UP")
+    st.title(
+        "📋 GARA FOLLOW-UP"
+    )
 
     st.divider()
 
-    st.write("👤 Utente")
-
-    st.caption(
-        user_response.user.email
+    st.write(
+        "👤 Utente"
     )
 
-    st.write("🏢 Azienda")
+    st.caption(
+        user.email
+        if user
+        else "-"
+    )
+
+    st.write(
+        "🏢 Azienda"
+    )
 
     st.caption(
-        azienda["nome"]
+        azienda.get("nome", "-")
     )
 
     st.divider()
@@ -189,15 +423,15 @@ with st.sidebar:
         [
             "Dashboard",
             "Gare",
-            "Attività"
-        ]
+            "Attività",
+        ],
     )
 
     st.divider()
 
     if st.button(
         "Esci",
-        use_container_width=True
+        use_container_width=True,
     ):
 
         try:
@@ -219,36 +453,12 @@ with st.sidebar:
 
 if pagina == "Dashboard":
 
-    st.title("Dashboard")
+    st.title(
+        "Dashboard"
+    )
 
     st.subheader(
-        "Benvenuto in GARA FOLLOW-UP"
-    )
-
-    gare_totali = len(gare)
-
-    gare_in_attesa = sum(
-        1
-        for gara in gare
-        if gara.get("stato") == "IN_ATTESA_APERTURA"
-    )
-
-    gare_buste_aperte = sum(
-        1
-        for gara in gare
-        if gara.get("stato") == "BUSTE_APERTE"
-    )
-
-    gare_vinte = sum(
-        1
-        for gara in gare
-        if gara.get("stato") == "VINTA"
-    )
-
-    gare_chiuse = sum(
-        1
-        for gara in gare
-        if gara.get("stato") == "CHIUSA"
+        "Panoramica"
     )
 
     col1, col2, col3, col4 = st.columns(4)
@@ -257,52 +467,144 @@ if pagina == "Dashboard":
 
         st.metric(
             "Gare",
-            gare_totali
-        )
-
-    with col2:
-
-        st.metric(
-            "In attesa",
-            gare_in_attesa
-        )
-
-    with col3:
-
-        st.metric(
-            "Vinte",
-            gare_vinte
-        )
-
-    with col4:
-
-        st.metric(
-            "Chiuse",
-            gare_chiuse
-        )
-
-    st.divider()
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        st.metric(
-            "Buste aperte",
-            gare_buste_aperte
+            len(gare),
         )
 
     with col2:
 
         st.metric(
             "Attività aperte",
-            "—"
+            len(attivita_aperte),
         )
 
-    st.info(
-        "La gestione completa di attività e reminder "
-        "verrà collegata nelle prossime fasi."
+    with col3:
+
+        st.metric(
+            "Reminder pendenti",
+            len(reminder_pendenti),
+        )
+
+    with col4:
+
+        st.metric(
+            "Scadute",
+            len(attivita_scadute),
+        )
+
+    st.divider()
+
+    # -----------------------------------------------
+    # ATTIVITÀ URGENTI
+    # -----------------------------------------------
+
+    st.subheader(
+        "⚠️ Da fare"
     )
+
+    if not attivita_aperte:
+
+        st.success(
+            "Non ci sono attività aperte."
+        )
+
+    else:
+
+        for item in attivita_aperte:
+
+            gara = next(
+                (
+                    gara
+                    for gara in gare
+                    if gara["id"] == item["gara_id"]
+                ),
+                None,
+            )
+
+            gara_nome = (
+                gara["oggetto"]
+                if gara
+                else "Gara"
+            )
+
+            data_prevista = (
+                item.get("data_prevista")
+                or "-"
+            )
+
+            if (
+                item.get("data_prevista")
+                and str(item["data_prevista"])
+                < str(oggi)
+            ):
+
+                icona = "🔴"
+
+            elif (
+                item.get("data_prevista")
+                and str(item["data_prevista"])
+                == str(oggi)
+            ):
+
+                icona = "🟠"
+
+            else:
+
+                icona = "🟢"
+
+            with st.container(
+                border=True
+            ):
+
+                st.write(
+                    f"{icona} **{item.get('titolo', 'Attività')}**"
+                )
+
+                st.caption(
+                    f"Gara: {gara_nome}"
+                )
+
+                st.caption(
+                    f"Scadenza: {data_prevista}"
+                )
+
+    st.divider()
+
+    # -----------------------------------------------
+    # GARE PER STATO
+    # -----------------------------------------------
+
+    st.subheader(
+        "Stato delle gare"
+    )
+
+    stati = {}
+
+    for gara in gare:
+
+        stato = gara.get(
+            "stato",
+            "SCONOSCIUTO",
+        )
+
+        stati[stato] = (
+            stati.get(stato, 0) + 1
+        )
+
+    if stati:
+
+        for stato, numero in sorted(
+            stati.items()
+        ):
+
+            st.write(
+                f"**{stato}**: {numero}"
+            )
+
+    else:
+
+        st.info(
+            "Nessuna gara presente."
+        )
 
 
 # =====================================================
@@ -311,117 +613,120 @@ if pagina == "Dashboard":
 
 elif pagina == "Gare":
 
-    st.title("Gare")
+    st.title(
+        "Gare"
+    )
 
     # =================================================
     # NUOVA GARA
     # =================================================
 
-    st.subheader("Nuova gara")
-
-    with st.form(
-        "nuova_gara_form",
-        clear_on_submit=True
+    with st.expander(
+        "➕ Nuova gara",
+        expanded=False,
     ):
 
         cig = st.text_input(
-            "CIG"
+            "CIG",
+            key="nuova_cig",
         )
 
         oggetto = st.text_input(
-            "Oggetto *"
+            "Oggetto *",
+            key="nuovo_oggetto",
         )
 
         stazione_appaltante = st.text_input(
-            "Stazione appaltante *"
+            "Stazione appaltante *",
+            key="nuova_stazione",
         )
 
         importo = st.number_input(
             "Importo",
             min_value=0.0,
-            step=1000.0
+            step=1000.0,
+            key="nuovo_importo",
         )
 
         link_portale = st.text_input(
-            "Link portale"
+            "Link portale",
+            key="nuovo_link",
         )
 
         data_apertura_prevista = st.date_input(
             "Data apertura prevista",
-            value=None
+            value=None,
+            key="nuova_data_prevista",
         )
 
         data_apertura_effettiva = st.date_input(
             "Data apertura effettiva",
-            value=None
+            value=None,
+            key="nuova_data_effettiva",
         )
 
-        salva_nuova_gara = st.form_submit_button(
+        if st.button(
             "Salva gara",
-            type="primary"
-        )
-
-    if salva_nuova_gara:
-
-        if (
-            not oggetto.strip()
-            or not stazione_appaltante.strip()
+            type="primary",
+            key="crea_gara",
         ):
 
-            st.error(
-                "Compila i campi obbligatori."
-            )
-
-        else:
-
-            dati = {
-                "cig": cig.strip() or None,
-                "oggetto": oggetto.strip(),
-                "stazione_appaltante": (
-                    stazione_appaltante.strip()
-                ),
-                "importo": importo,
-                "link_portale": (
-                    link_portale.strip() or None
-                ),
-                "data_apertura_prevista": (
-                    data_apertura_prevista
-                ),
-                "data_apertura_effettiva": (
-                    data_apertura_effettiva
-                )
-            }
-
-            try:
-
-                crea_gara(
-                    supabase,
-                    azienda_id,
-                    dati
-                )
-
-                st.session_state[
-                    "messaggio_successo"
-                ] = (
-                    "✅ Gara salvata correttamente."
-                )
-
-                st.rerun()
-
-            except Exception as e:
+            if (
+                not oggetto.strip()
+                or not stazione_appaltante.strip()
+            ):
 
                 st.error(
-                    f"Errore nel salvataggio: {e}"
+                    "Compila i campi obbligatori."
                 )
 
+            else:
+
+                dati = {
+                    "cig": cig.strip() or None,
+                    "oggetto": oggetto.strip(),
+                    "stazione_appaltante":
+                        stazione_appaltante.strip(),
+                    "importo": importo,
+                    "link_portale":
+                        link_portale.strip() or None,
+                    "data_apertura_prevista":
+                        data_apertura_prevista,
+                    "data_apertura_effettiva":
+                        data_apertura_effettiva,
+                }
+
+                try:
+
+                    crea_gara(
+                        supabase,
+                        azienda_id,
+                        dati,
+                    )
+
+                    st.session_state[
+                        "messaggio_successo"
+                    ] = (
+                        "✅ Gara salvata correttamente."
+                    )
+
+                    st.rerun()
+
+                except Exception as e:
+
+                    st.error(
+                        f"Errore nel salvataggio: {e}"
+                    )
 
     # =================================================
-    # ELENCO GARE
+    # ELENCO
     # =================================================
 
     st.divider()
 
-    st.subheader("Gare esistenti")
+    st.subheader(
+        f"Gare esistenti ({len(gare)})"
+    )
 
     if not gare:
 
@@ -433,18 +738,43 @@ elif pagina == "Gare":
 
         for gara in gare:
 
+            stato = gara.get(
+                "stato",
+                "-",
+            )
+
+            if stato == "CHIUSA":
+
+                colore = "🔒"
+
+            elif stato == "VINTA":
+
+                colore = "🏆"
+
+            elif stato == "PERSA":
+
+                colore = "❌"
+
+            elif stato == "BUSTE_APERTE":
+
+                colore = "📂"
+
+            else:
+
+                colore = "⏳"
+
             with st.container(
                 border=True
             ):
 
                 col1, col2 = st.columns(
-                    [3, 1]
+                    [4, 1]
                 )
 
                 with col1:
 
                     st.write(
-                        f"**{gara['oggetto']}**"
+                        f"### {gara['oggetto']}"
                     )
 
                     st.caption(
@@ -453,20 +783,18 @@ elif pagina == "Gare":
 
                     st.caption(
                         "Stazione appaltante: "
-                        f"{gara['stazione_appaltante']}"
+                        f"{gara.get('stazione_appaltante', '-')}"
+                    )
+
+                    st.caption(
+                        f"Stato: {colore} {stato}"
                     )
 
                 with col2:
 
-                    stato = gara.get(
-                        "stato"
-                    ) or "-"
-
-                    st.write(
-                        f"**{stato}**"
-                    )
-
-                    if gara.get("importo") is not None:
+                    if gara.get(
+                        "importo"
+                    ) is not None:
 
                         st.write(
                             f"€ {float(gara['importo']):,.2f}"
@@ -474,7 +802,8 @@ elif pagina == "Gare":
 
                     if st.button(
                         "Apri gara",
-                        key=f"apri_{gara['id']}"
+                        key=f"apri_{gara['id']}",
+                        use_container_width=True,
                     ):
 
                         st.session_state[
@@ -482,7 +811,6 @@ elif pagina == "Gare":
                         ] = gara["id"]
 
                         st.rerun()
-
 
     # =================================================
     # DETTAGLIO GARA
@@ -500,10 +828,20 @@ elif pagina == "Gare":
                 for gara in gare
                 if gara["id"] == gara_id
             ),
-            None
+            None,
         )
 
-        if gara_selezionata:
+        if not gara_selezionata:
+
+            st.warning(
+                "La gara selezionata non è più disponibile."
+            )
+
+            del st.session_state[
+                "gara_selezionata"
+            ]
+
+        else:
 
             st.divider()
 
@@ -512,12 +850,46 @@ elif pagina == "Gare":
             )
 
             st.write(
-                f"### {gara_selezionata['oggetto']}"
+                f"## {gara_selezionata['oggetto']}"
             )
 
+            stato = gara_selezionata.get(
+                "stato",
+                "-",
+            )
+
+            if stato == "CHIUSA":
+
+                st.warning(
+                    "🔒 Gara chiusa"
+                )
+
+            elif stato == "VINTA":
+
+                st.success(
+                    "🏆 Gara vinta"
+                )
+
+            elif stato == "PERSA":
+
+                st.error(
+                    "❌ Gara persa"
+                )
+
+            elif stato == "BUSTE_APERTE":
+
+                st.info(
+                    "📂 Buste aperte"
+                )
+
+            else:
+
+                st.info(
+                    f"⏳ {stato}"
+                )
 
             # -----------------------------------------
-            # DATI GARA
+            # DATI
             # -----------------------------------------
 
             col1, col2 = st.columns(2)
@@ -525,18 +897,24 @@ elif pagina == "Gare":
             with col1:
 
                 st.write(
-                    "**CIG:** "
+                    f"**CIG:** "
                     f"{gara_selezionata.get('cig') or '-'}"
                 )
 
                 st.write(
                     "**Stazione appaltante:** "
-                    f"{gara_selezionata['stazione_appaltante']}"
+                    f"{gara_selezionata.get('stazione_appaltante') or '-'}"
                 )
 
                 st.write(
-                    "**Stato:** "
-                    f"{gara_selezionata.get('stato') or '-'}"
+                    "**Importo:** "
+                    + (
+                        f"€ {float(gara_selezionata['importo']):,.2f}"
+                        if gara_selezionata.get(
+                            "importo"
+                        ) is not None
+                        else "-"
+                    )
                 )
 
                 st.write(
@@ -545,46 +923,6 @@ elif pagina == "Gare":
                 )
 
             with col2:
-
-                importo_gara = gara_selezionata.get(
-                    "importo"
-                )
-
-                if importo_gara is not None:
-
-                    st.write(
-                        "**Importo:** "
-                        f"€ {float(importo_gara):,.2f}"
-                    )
-
-                else:
-
-                    st.write(
-                        "**Importo:** -"
-                    )
-
-                link_portale_gara = (
-                    gara_selezionata.get(
-                        "link_portale"
-                    )
-                )
-
-                if link_portale_gara:
-
-                    st.write(
-                        "**Link portale:**"
-                    )
-
-                    st.link_button(
-                        "Apri portale",
-                        link_portale_gara
-                    )
-
-                else:
-
-                    st.write(
-                        "**Link portale:** -"
-                    )
 
                 st.write(
                     "**Apertura prevista:** "
@@ -606,14 +944,90 @@ elif pagina == "Gare":
                     f"{gara_selezionata.get('ribasso_vincitore') or '-'}"
                 )
 
+            link = gara_selezionata.get(
+                "link_portale"
+            )
+
+            if link:
+
+                st.link_button(
+                    "🌐 Apri portale",
+                    link,
+                )
+
             st.write(
                 "**Ultimo aggiornamento:** "
                 f"{gara_selezionata.get('ultimo_aggiornamento') or '-'}"
             )
 
+            # -----------------------------------------
+            # AZIONI WORKFLOW
+            # -----------------------------------------
+
+            st.divider()
+
+            st.subheader(
+                "Workflow"
+            )
+
+            if stato == "CHIUSA":
+
+                if st.button(
+                    "🔓 Riapri gara",
+                    type="primary",
+                    key=f"riapri_{gara_id}",
+                ):
+
+                    try:
+
+                        riapri_gara(
+                            gara_id
+                        )
+
+                        st.session_state[
+                            "messaggio_successo"
+                        ] = (
+                            "✅ Gara riaperta. "
+                            "Il workflow è stato rivalutato."
+                        )
+
+                        st.rerun()
+
+                    except Exception as e:
+
+                        st.error(
+                            f"Errore riapertura gara: {e}"
+                        )
+
+            else:
+
+                if st.button(
+                    "🔒 Chiudi gara",
+                    key=f"chiudi_{gara_id}",
+                ):
+
+                    try:
+
+                        chiudi_gara(
+                            gara_id
+                        )
+
+                        st.session_state[
+                            "messaggio_successo"
+                        ] = (
+                            "✅ Gara chiusa correttamente."
+                        )
+
+                        st.rerun()
+
+                    except Exception as e:
+
+                        st.error(
+                            f"Errore chiusura gara: {e}"
+                        )
 
             # -----------------------------------------
-            # MODIFICA DATI GARA
+            # MODIFICA DATI
             # -----------------------------------------
 
             st.divider()
@@ -629,7 +1043,7 @@ elif pagina == "Gare":
                         "cig"
                     ) or ""
                 ),
-                key=f"modifica_cig_{gara_id}"
+                key=f"modifica_cig_{gara_id}",
             )
 
             modifica_oggetto = st.text_input(
@@ -639,7 +1053,7 @@ elif pagina == "Gare":
                         "oggetto"
                     ) or ""
                 ),
-                key=f"modifica_oggetto_{gara_id}"
+                key=f"modifica_oggetto_{gara_id}",
             )
 
             modifica_stazione = st.text_input(
@@ -649,7 +1063,7 @@ elif pagina == "Gare":
                         "stazione_appaltante"
                     ) or ""
                 ),
-                key=f"modifica_stazione_{gara_id}"
+                key=f"modifica_stazione_{gara_id}",
             )
 
             modifica_importo = st.number_input(
@@ -661,7 +1075,7 @@ elif pagina == "Gare":
                     ) or 0
                 ),
                 step=1000.0,
-                key=f"modifica_importo_{gara_id}"
+                key=f"modifica_importo_{gara_id}",
             )
 
             modifica_link = st.text_input(
@@ -671,27 +1085,7 @@ elif pagina == "Gare":
                         "link_portale"
                     ) or ""
                 ),
-                key=f"modifica_link_{gara_id}"
-            )
-
-            modifica_data_apertura_prevista = st.date_input(
-                "Data apertura prevista",
-                value=(
-                    gara_selezionata.get(
-                        "data_apertura_prevista"
-                    )
-                ),
-                key=f"modifica_data_prevista_{gara_id}"
-            )
-
-            modifica_data_apertura_effettiva = st.date_input(
-                "Data apertura effettiva",
-                value=(
-                    gara_selezionata.get(
-                        "data_apertura_effettiva"
-                    )
-                ),
-                key=f"modifica_data_effettiva_{gara_id}"
+                key=f"modifica_link_{gara_id}",
             )
 
             modifica_vincitore = st.text_input(
@@ -701,7 +1095,7 @@ elif pagina == "Gare":
                         "vincitore"
                     ) or ""
                 ),
-                key=f"modifica_vincitore_{gara_id}"
+                key=f"modifica_vincitore_{gara_id}",
             )
 
             modifica_ribasso_proprio = st.text_input(
@@ -711,7 +1105,7 @@ elif pagina == "Gare":
                         "ribasso_proprio"
                     ) or ""
                 ),
-                key=f"modifica_ribasso_proprio_{gara_id}"
+                key=f"modifica_ribasso_proprio_{gara_id}",
             )
 
             modifica_ribasso_vincitore = st.text_input(
@@ -721,7 +1115,7 @@ elif pagina == "Gare":
                         "ribasso_vincitore"
                     ) or ""
                 ),
-                key=f"modifica_ribasso_vincitore_{gara_id}"
+                key=f"modifica_ribasso_vincitore_{gara_id}",
             )
 
             modifica_ultimo_aggiornamento = st.text_area(
@@ -731,18 +1125,13 @@ elif pagina == "Gare":
                         "ultimo_aggiornamento"
                     ) or ""
                 ),
-                key=f"modifica_ultimo_aggiornamento_{gara_id}"
+                key=f"modifica_ultimo_aggiornamento_{gara_id}",
             )
 
-
-            # -----------------------------------------
-            # SALVATAGGIO DATI
-            # -----------------------------------------
-
             if st.button(
-                "Salva modifiche",
-                key=f"salva_modifiche_gara_{gara_id}",
-                type="primary"
+                "💾 Salva modifiche",
+                type="primary",
+                key=f"salva_modifiche_{gara_id}",
             ):
 
                 if (
@@ -757,55 +1146,38 @@ elif pagina == "Gare":
                 else:
 
                     dati_modifica = {
-                        "cig": (
+                        "cig":
                             modifica_cig.strip()
-                            or None
-                        ),
+                            or None,
 
-                        "oggetto": (
-                            modifica_oggetto.strip()
-                        ),
+                        "oggetto":
+                            modifica_oggetto.strip(),
 
-                        "stazione_appaltante": (
-                            modifica_stazione.strip()
-                        ),
+                        "stazione_appaltante":
+                            modifica_stazione.strip(),
 
-                        "importo": (
-                            modifica_importo
-                        ),
+                        "importo":
+                            modifica_importo,
 
-                        "link_portale": (
+                        "link_portale":
                             modifica_link.strip()
-                            or None
-                        ),
+                            or None,
 
-                        "data_apertura_prevista": (
-                            modifica_data_apertura_prevista
-                        ),
-
-                        "data_apertura_effettiva": (
-                            modifica_data_apertura_effettiva
-                        ),
-
-                        "vincitore": (
+                        "vincitore":
                             modifica_vincitore.strip()
-                            or None
-                        ),
+                            or None,
 
-                        "ribasso_proprio": (
+                        "ribasso_proprio":
                             modifica_ribasso_proprio.strip()
-                            or None
-                        ),
+                            or None,
 
-                        "ribasso_vincitore": (
+                        "ribasso_vincitore":
                             modifica_ribasso_vincitore.strip()
-                            or None
-                        ),
+                            or None,
 
-                        "ultimo_aggiornamento": (
+                        "ultimo_aggiornamento":
                             modifica_ultimo_aggiornamento.strip()
-                            or None
-                        )
+                            or None,
                     }
 
                     try:
@@ -814,7 +1186,7 @@ elif pagina == "Gare":
                             supabase,
                             azienda_id,
                             gara_id,
-                            dati_modifica
+                            dati_modifica,
                         )
 
                         st.session_state[
@@ -831,96 +1203,66 @@ elif pagina == "Gare":
                             f"Errore aggiornamento gara: {e}"
                         )
 
-
             # -----------------------------------------
-            # AZIONI WORKFLOW
+            # STORICO
             # -----------------------------------------
 
             st.divider()
 
             st.subheader(
-                "Azioni workflow"
+                "Storico stati"
             )
 
-            stato_gara = gara_selezionata.get(
-                "stato"
-            )
+            try:
 
-            col1, col2 = st.columns(2)
+                storico = get_storico(
+                    gara_id
+                )
 
-            with col1:
+                if not storico:
 
-                if stato_gara != "CHIUSA":
+                    st.info(
+                        "Nessuna transizione registrata."
+                    )
 
-                    if st.button(
-                        "🔒 Chiudi gara",
-                        key=f"chiudi_{gara_id}"
-                    ):
+                else:
 
-                        try:
+                    for evento in storico:
 
-                            supabase.rpc(
-                                "chiudi_gara",
-                                {
-                                    "p_gara_id": gara_id
-                                }
-                            ).execute()
-
-                            st.session_state[
-                                "messaggio_successo"
-                            ] = (
-                                "✅ Gara chiusa correttamente."
+                        precedente = (
+                            evento.get(
+                                "stato_precedente"
                             )
+                            or "-"
+                        )
 
-                            st.rerun()
-
-                        except Exception as e:
-
-                            st.error(
-                                f"Errore chiusura gara: {e}"
+                        nuovo = (
+                            evento.get(
+                                "nuovo_stato"
                             )
+                            or "-"
+                        )
 
-            with col2:
-
-                if stato_gara == "CHIUSA":
-
-                    if st.button(
-                        "🔓 Riapri gara",
-                        key=f"riapri_{gara_id}"
-                    ):
-
-                        try:
-
-                            supabase.rpc(
-                                "riapri_gara",
-                                {
-                                    "p_gara_id": gara_id
-                                }
-                            ).execute()
-
-                            st.session_state[
-                                "messaggio_successo"
-                            ] = (
-                                "✅ Gara riaperta correttamente."
+                        created_at = (
+                            evento.get(
+                                "created_at"
                             )
+                            or "-"
+                        )
 
-                            st.rerun()
+                        st.write(
+                            f"**{precedente} → {nuovo}**"
+                        )
 
-                        except Exception as e:
+                        st.caption(
+                            str(created_at)
+                        )
 
-                            st.error(
-                                f"Errore riapertura gara: {e}"
-                            )
+            except Exception as e:
 
-        else:
-
-            st.warning(
-                "La gara selezionata non è più disponibile."
-            )
-
-            del st.session_state[
-                "gara_selezionata"
-            ]
+                st.warning(
+                    f"Errore caricamento storico: {e}"
+                )
 
 
 # =====================================================
@@ -929,8 +1271,303 @@ elif pagina == "Gare":
 
 elif pagina == "Attività":
 
-    st.title("Attività")
-
-    st.info(
-        "Gestione attività in costruzione."
+    st.title(
+        "Attività"
     )
+
+    st.subheader(
+        "Workflow operativo"
+    )
+
+    # -----------------------------------------------
+    # FILTRI
+    # -----------------------------------------------
+
+    filtro = st.selectbox(
+        "Mostra",
+        [
+            "Tutte",
+            "Aperte",
+            "Completate",
+            "Annullate",
+        ],
+    )
+
+    attivita_filtrate = attivita
+
+    if filtro == "Aperte":
+
+        attivita_filtrate = [
+            item
+            for item in attivita
+            if item.get(
+                "stato_attivita"
+            ) == "APERTA"
+        ]
+
+    elif filtro == "Completate":
+
+        attivita_filtrate = [
+            item
+            for item in attivita
+            if item.get(
+                "stato_attivita"
+            ) == "COMPLETATA"
+        ]
+
+    elif filtro == "Annullate":
+
+        attivita_filtrate = [
+            item
+            for item in attivita
+            if item.get(
+                "stato_attivita"
+            ) == "ANNULLATA"
+        ]
+
+    # -----------------------------------------------
+    # ELENCO
+    # -----------------------------------------------
+
+    if not attivita_filtrate:
+
+        st.info(
+            "Nessuna attività trovata."
+        )
+
+    else:
+
+        for item in attivita_filtrate:
+
+            gara = next(
+                (
+                    gara
+                    for gara in gare
+                    if gara["id"]
+                    == item["gara_id"]
+                ),
+                None,
+            )
+
+            gara_nome = (
+                gara["oggetto"]
+                if gara
+                else "Gara non trovata"
+            )
+
+            stato_attivita = item.get(
+                "stato_attivita",
+                "-",
+            )
+
+            if stato_attivita == "APERTA":
+
+                icona = "🟠"
+
+            elif stato_attivita == "COMPLETATA":
+
+                icona = "✅"
+
+            else:
+
+                icona = "⚪"
+
+            with st.container(
+                border=True
+            ):
+
+                st.write(
+                    f"{icona} **{item.get('titolo', 'Attività')}**"
+                )
+
+                st.caption(
+                    f"Gara: {gara_nome}"
+                )
+
+                col1, col2, col3 = st.columns(
+                    3
+                )
+
+                with col1:
+
+                    st.write(
+                        f"**Tipo:** "
+                        f"{item.get('tipo', '-')}"
+                    )
+
+                with col2:
+
+                    st.write(
+                        f"**Stato:** "
+                        f"{stato_attivita}"
+                    )
+
+                with col3:
+
+                    st.write(
+                        f"**Data prevista:** "
+                        f"{item.get('data_prevista') or '-'}"
+                    )
+
+                if item.get(
+                    "descrizione"
+                ):
+
+                    st.write(
+                        item["descrizione"]
+                    )
+
+                if item.get(
+                    "motivo"
+                ):
+
+                    st.caption(
+                        f"Motivo: {item['motivo']}"
+                    )
+
+                # -----------------------------------
+                # AZIONI
+                # -----------------------------------
+
+                if stato_attivita == "APERTA":
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+
+                        if st.button(
+                            "✅ Completa",
+                            key=f"completa_{item['id']}",
+                            use_container_width=True,
+                        ):
+
+                            try:
+
+                                aggiorna_attivita(
+                                    item["id"],
+                                    "COMPLETATA",
+                                )
+
+                                aggiorna_reminder(
+                                    item["id"],
+                                    "COMPLETATO",
+                                )
+
+                                st.session_state[
+                                    "messaggio_successo"
+                                ] = (
+                                    "✅ Attività completata."
+                                )
+
+                                st.rerun()
+
+                            except Exception as e:
+
+                                st.error(
+                                    f"Errore: {e}"
+                                )
+
+                    with col2:
+
+                        if st.button(
+                            "🚫 Annulla",
+                            key=f"annulla_{item['id']}",
+                            use_container_width=True,
+                        ):
+
+                            try:
+
+                                aggiorna_attivita(
+                                    item["id"],
+                                    "ANNULLATA",
+                                )
+
+                                aggiorna_reminder(
+                                    item["id"],
+                                    "ANNULLATO",
+                                )
+
+                                st.session_state[
+                                    "messaggio_successo"
+                                ] = (
+                                    "Attività annullata."
+                                )
+
+                                st.rerun()
+
+                            except Exception as e:
+
+                                st.error(
+                                    f"Errore: {e}"
+                                )
+
+    # -----------------------------------------------
+    # REMINDER
+    # -----------------------------------------------
+
+    st.divider()
+
+    st.subheader(
+        "🔔 Reminder"
+    )
+
+    if not reminder_pendenti:
+
+        st.success(
+            "Nessun reminder pendente."
+        )
+
+    else:
+
+        for rem in reminder_pendenti:
+
+            attivita_reminder = next(
+                (
+                    item
+                    for item in attivita
+                    if item["id"]
+                    == rem["attivita_id"]
+                ),
+                None,
+            )
+
+            titolo = (
+                attivita_reminder.get(
+                    "titolo"
+                )
+                if attivita_reminder
+                else "Attività"
+            )
+
+            data_reminder = (
+                rem.get(
+                    "data_prevista"
+                )
+                or "-"
+            )
+
+            if (
+                rem.get("data_prevista")
+                and str(rem["data_prevista"])
+                < str(oggi)
+            ):
+
+                st.error(
+                    f"🔴 **{titolo}** — scaduto: {data_reminder}"
+                )
+
+            elif (
+                rem.get("data_prevista")
+                and str(rem["data_prevista"])
+                == str(oggi)
+            ):
+
+                st.warning(
+                    f"🟠 **{titolo}** — oggi"
+                )
+
+            else:
+
+                st.info(
+                    f"🔵 **{titolo}** — {data_reminder}"
+                )
