@@ -2515,19 +2515,15 @@ elif pagina == "Attività":
 
                         if st.button(
                             "✅ Completa",
-                            key=(
-                                f"complete_"
-                                f"{attivita_id}"
-                            ),
+                            key=f"complete_{attivita_id}",
                             type="primary",
                             use_container_width=True,
                         ):
 
                             try:
-
                                 aggiorna_attivita(
-                                    attivita_id,
-                                    "COMPLETATA",
+                                   attivita_id,
+                                  "COMPLETATA",
                                 )
 
                                 aggiorna_reminder(
@@ -2535,19 +2531,25 @@ elif pagina == "Attività":
                                     "INVIATO",
                                 )
 
+                                gara_id = item["gara_id"]
+
+                                rivaluta_workflow_gara(
+                                    gara_id
+                                )
+
                                 invalidate_data()
 
                                 success(
-                                    "✅ Attività completata."
+                                    "✅ Attività completata e workflow rivalutato."
                                 )
 
                                 st.rerun()
 
-                            except Exception as e:
+                              except Exception as e:
 
-                                st.error(
-                                    f"Errore: {e}"
-                                )
+                                 st.error(
+                                     f"Errore completamento attività: {e}"
+                                 )
 
                     with c2:
 
