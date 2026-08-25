@@ -2545,7 +2545,7 @@ elif pagina == "Attività":
 
                                 st.rerun()
 
-                              except Exception as e:
+                            except Exception as e:
 
                                  st.error(
                                      f"Errore completamento attività: {e}"
